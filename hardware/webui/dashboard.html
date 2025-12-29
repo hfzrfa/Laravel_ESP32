@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Home Comfort Console</title>
+        <link rel="preconnect" href="https://fonts.bunny.net" />
+        <link
+            href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/assets/tailwind.css" />
+        <script defer src="/assets/app.js"></script>
+    </head>
+
+    <body
+        class="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-100 p-4 text-zinc-900 antialiased dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
+    >
+        <div class="mx-auto flex max-w-6xl flex-col gap-6 lg:px-6">
+            <header
+                class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+            >
+                <div>
+                    <p
+                        class="text-xs uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400"
+                    >
+                        ESP32 real-time monitor
+                    </p>
+                    <h1
+                        class="mt-2 text-3xl font-semibold text-zinc-900 dark:text-white"
+                    >
+                        Home Comfort Console
+                    </h1>
+                    <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                        Track DHT11 telemetry, manage displays, and schedule RTC
+                        alarms directly from the ESP32 hotspot.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <span id="device-status" class="badge badge-warn text-sm">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span
+                                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-40"
+                            ></span>
+                            <span
+                                class="relative inline-flex h-2.5 w-2.5 rounded-full bg-current"
+                            ></span>
+                        </span>
+                        <span id="device-status-text">Waiting for device</span>
+                    </span>
+                    <span
+                        class="badge border-zinc-200/80 bg-white/80 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-300"
+                    >
+                        Last ping:
+                        <span id="last-ping" class="font-semibold">Never</span>
+                    </span>
+                    <span
+                        class="badge border-zinc-200/80 bg-white/80 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-300"
+                    >
+                        IP
+                        <span id="ip-address" class="font-semibold"
+                            >0.0.0.0</span
+                        >
+                    </span>
+                    <span
+                        class="badge border-zinc-200/80 bg-white/80 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-300"
+                    >
+                        Last sync:
+                        <span id="time-sync" class="font-semibold">Never</span>
+                    </span>
+                </div>
+            </header>
+
+            <div
+                id="toast"
+                class="hidden rounded-xl border border-emerald-200/60 bg-emerald-50/80 p-4 text-sm text-emerald-900"
+            ></div>
+
+            <section class="grid gap-6 lg:grid-cols-3">
+                <div class="panel lg:col-span-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="panel-title">Live Telemetry</p>
+                            <p class="text-xs text-zinc-400">
+                                Updates every minute • last update
+                                <span id="reading-updated">never</span>
+                            </p>
+                        </div>
+                        <div class="text-xs text-zinc-400">
+                            Local API served via ESP32
+                        </div>
+                    </div>
+
+                    <div class="mt-6 grid gap-4 md:grid-cols-2">
+                        <div
+                            class="rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 p-5 text-white shadow-xl"
+                        >
+                            <p
+                                class="text-sm uppercase tracking-wide text-white/80"
+                            >
+                                Temperature
+                            </p>
+                            <p
+                                id="temp-value"
+                                class="stat-value mt-3 text-white"
+                            >
+                                --
+                            </p>
+                            <p class="text-sm text-white/70">
+                                Comfort range 21-26°C
+                            </p>
+                        </div>
+                        <div
+                            class="rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 p-5 text-white shadow-xl"
+                        >
+                            <p
+                                class="text-sm uppercase tracking-wide text-white/80"
+                            >
+                                Humidity
+                            </p>
+                            <p
+                                id="hum-value"
+                                class="stat-value mt-3 text-white"
+                            >
+                                --
+                            </p>
+                            <p class="text-sm text-white/70">Optimal 40-60%</p>
+                        </div>
+                        <div
+                            class="rounded-2xl border border-zinc-100/70 bg-white/80 p-5 shadow-inner shadow-black/5 dark:border-zinc-800/50 dark:bg-zinc-900/60"
+                        >
+                            <p
+                                class="text-sm uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                            >
+                                Battery
+                            </p>
+                            <p
+                                id="battery-value"
+                                class="stat-value mt-3 text-zinc-900 dark:text-white"
+                            >
+                                --
+                            </p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                Placeholder estimate
+                            </p>
+                        </div>
+                        <div
+                            class="rounded-2xl border border-zinc-100/70 bg-white/80 p-5 shadow-inner shadow-black/5 dark:border-zinc-800/50 dark:bg-zinc-900/60"
+                        >
+                            <p
+                                class="text-sm uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                            >
+                                Signal
+                            </p>
+                            <p
+                                id="signal-value"
+                                class="stat-value mt-3 text-zinc-900 dark:text-white"
+                            >
+                                --
+                            </p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                STA RSSI
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel flex flex-col gap-4">
+                    <div>
+                        <p class="panel-title">Alarm Timeline</p>
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                            RTC based events
+                        </p>
+                    </div>
+                    <dl
+                        class="space-y-3 text-sm text-zinc-600 dark:text-zinc-300"
+                    >
+                        <div class="flex justify-between">
+                            <dt>Alarm state</dt>
+                            <dd id="alarm-state" class="font-semibold">
+                                Disabled
+                            </dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt>Scheduled time</dt>
+                            <dd id="alarm-time" class="font-semibold">—</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt>Last triggered</dt>
+                            <dd id="alarm-last" class="font-semibold">Never</dd>
+                        </div>
+                    </dl>
+                    <div
+                        class="rounded-2xl border border-dashed border-zinc-200 p-4 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+                    >
+                        Alarm acknowledgements are stored locally and triggered
+                        entirely by the ESP32.
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid gap-6">
+                <div class="panel space-y-5">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <p
+                                class="panel-title text-zinc-600 dark:text-zinc-300"
+                            >
+                                Climate analysis
+                            </p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                Auto-updates every minute with temperature &
+                                humidity trends.
+                            </p>
+                        </div>
+                        <div class="text-xs text-zinc-400 dark:text-zinc-300">
+                            Local render · No external CDN
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <canvas
+                            id="climate-chart"
+                            class="h-56 w-full rounded-2xl bg-white/60 dark:bg-zinc-900/60"
+                        ></canvas>
+                        <div
+                            id="chart-empty"
+                            class="absolute inset-0 flex items-center justify-center rounded-2xl text-sm text-zinc-500 dark:text-zinc-200"
+                        >
+                            Waiting for sensor data...
+                        </div>
+                    </div>
+                    <div
+                        class="flex flex-wrap gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-200"
+                    >
+                        <span class="flex items-center gap-2">
+                            <span
+                                class="inline-flex h-1.5 w-6 rounded-full bg-gradient-to-r from-orange-400 to-rose-500"
+                            ></span>
+                            Temperature (°C)
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <span
+                                class="inline-flex h-1.5 w-6 rounded-full bg-gradient-to-r from-sky-400 to-indigo-500"
+                            ></span>
+                            Humidity (%)
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid gap-6 lg:grid-cols-3">
+                <form id="displayForm" class="panel space-y-4">
+                    <div>
+                        <p class="panel-title">OLED presets</p>
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                            Push copy to the onboard OLED panel. Changes appear
+                            on the next minute refresh.
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-white"
+                            >OLED mode</label
+                        >
+                        <select name="oled_mode" class="input-control">
+                            <option value="clock">Clock</option>
+                            <option value="sensor">Sensor snapshot</option>
+                            <option value="custom">Custom text</option>
+                        </select>
+                        <textarea
+                            name="oled_custom_text"
+                            rows="3"
+                            maxlength="64"
+                            class="input-control"
+                            placeholder="Up to 64 characters"
+                        ></textarea>
+                        <p class="text-xs text-zinc-400">
+                            Need multiple lines? Use \n to insert a break.
+                        </p>
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <button type="reset" class="btn-ghost">Reset</button>
+                        <button type="submit" class="btn-primary">
+                            Update displays
+                        </button>
+                    </div>
+                </form>
+
+                <form id="alarmForm" class="panel space-y-4">
+                    <div>
+                        <p class="panel-title">RTC alarm</p>
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                            Schedule wake-up pulses.
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <label
+                            class="inline-flex items-center gap-2 text-sm font-medium"
+                        >
+                            <input
+                                type="checkbox"
+                                name="alarm_enabled"
+                                value="1"
+                                class="h-4 w-4 rounded border-zinc-300 text-white focus:ring-indigo-400"
+                            />
+                            Enable alarm
+                        </label>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-white"
+                            >Alarm time (24h)</label
+                        >
+                        <input
+                            type="time"
+                            name="alarm_time"
+                            class="input-control"
+                        />
+                    </div>
+                    <div
+                        class="rounded-2xl border border-dashed border-zinc-200 p-4 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+                    >
+                        When the ESP32 reaches the alarm time it will buzz/flash
+                        and log the event locally.
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn-primary">
+                            Save alarm
+                        </button>
+                    </div>
+                </form>
+
+                <form id="outputsForm" class="panel space-y-4">
+                    <div>
+                        <p class="panel-title">Outputs</p>
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                            LED + buzzer policy.
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-white">LED Mode</label>
+                        <select name="led_mode" class="input-control">
+                            <option value="auto">Auto (sensors)</option>
+                            <option value="on">Force on</option>
+                            <option value="off">Force off</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label
+                            class="inline-flex items-center gap-2 text-sm font-medium"
+                        >
+                            <input
+                                type="checkbox"
+                                name="buzzer_enabled"
+                                value="1"
+                                class="h-4 w-4 rounded border-zinc-300 text-white focus:ring-indigo-400"
+                            />
+                            Allow buzzer alerts
+                        </label>
+                    </div>
+                    <div
+                        class="rounded-2xl border border-dashed border-zinc-200 p-4 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+                    >
+                        Auto mode pulses the LED when humidity &gt; 65% or
+                        temperature &gt; 30°C. Manual overrides apply instantly
+                        after saving.
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn-primary">
+                            Sync outputs
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <footer
+                class="pb-10 text-center text-xs text-zinc-500 dark:text-zinc-400"
+            >
+                Hosted directly from the ESP32 SoftAP. Keep your device
+                connected to <code>ESP32-Monitor</code> for updates.
+            </footer>
+        </div>
+    </body>
+</html>
